@@ -2,13 +2,18 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>Booking Flex Auto (Debug)</title>
+  <title>Booking Flex Debug</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: sans-serif; background:#f4f4f4; padding:20px; }
+    #log { white-space: pre-wrap; background:#fff; padding:10px; border:1px solid #ccc; }
+  </style>
 </head>
 <body>
+<h3>LIFF Debug</h3>
 <pre id="log">Loading…</pre>
 <script>
-const liffId = '2007795446-LJyk3OJ3';
+const liffId = '2007795446-LJyk3OJ3';   // <<< put your LIFF ID here
 
 const flexRoom = {
   type: 'flex',
@@ -64,20 +69,19 @@ const flexDateTime = {
   }
 };
 
-function log(msg) {
+function log(msg){
   console.log(msg);
-  const el = document.getElementById('log');
-  el.textContent += `\n${msg}`;
+  document.getElementById('log').textContent += '\n' + msg;
 }
 
-async function main() {
-  try {
+async function main(){
+  try{
     log('Initializing LIFF…');
     await liff.init({ liffId });
     log('LIFF init done');
     log('isInClient: ' + liff.isInClient());
 
-    if (!liff.isInClient()) {
+    if (!liff.isInClient()){
       document.getElementById('log').textContent = 'กรุณาเปิดหน้านี้ใน LINE';
       return;
     }
@@ -85,16 +89,20 @@ async function main() {
     const profile = await liff.getProfile();
     log('Profile: ' + JSON.stringify(profile));
 
-    log('Sending Flex messages…');
+    log('Step 1: send plain text');
+    await liff.sendMessages([{ type:'text', text:'Test message from LIFF' }]);
+    log('Text message sent OK');
+
+    log('Step 2: send Flex messages');
     await liff.sendMessages([flexRoom, flexDateTime]);
-    log('Messages sent successfully');
+    log('Flex messages sent OK');
+
     liff.closeWindow();
-  } catch (e) {
-    console.error('Send error', e);
-    document.getElementById('log').textContent = 'ส่งข้อความล้มเหลว\n' + e;
+  }catch(err){
+    console.error('Error sending', err);
+    document.getElementById('log').textContent += '\nส่งข้อความล้มเหลว\n' + err;
   }
 }
-
 main();
 </script>
 </body>

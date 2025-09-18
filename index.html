@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>Booking Flex Auto</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head>
+<body>
+<script>
+const liffId = '2007795446-LJyk3OJ3';
+
+const flexRoom = {
+  type: 'flex',
+  altText: 'เลือกห้องประชุม',
+  contents: {
+    type: 'bubble',
+    body: {
+      type: 'box',
+      layout: 'vertical',
+      contents: [
+        { type: 'text', text: 'เลือกห้องประชุม', weight: 'bold', size: 'lg', align: 'center' },
+        {
+          type: 'box', layout: 'vertical', margin: 'lg', spacing: 'sm',
+          contents: [
+            { type: 'button', action: { type: 'postback', label: 'Evolve Room – 1st floor', data: 'room=evolve' }, style: 'primary', color: '#5B86E5' },
+            { type: 'button', action: { type: 'postback', label: 'Strategic Thinking Room – 2nd floor', data: 'room=strategic' }, style: 'secondary' },
+            { type: 'button', action: { type: 'postback', label: 'Teamwork Room – 4th floor', data: 'room=teamwork' }, style: 'secondary' }
+          ]
+        }
+      ]
+    },
+    styles: { body: { backgroundColor: '#FFFFFF' } }
+  }
+};
+
+const flexDateTime = {
+  type: 'flex',
+  altText: 'เลือกวันที่และเวลา',
+  contents: {
+    type: 'bubble',
+    body: {
+      type: 'box',
+      layout: 'vertical',
+      contents: [
+        { type: 'text', text: 'เลือกวันที่และเวลา', weight: 'bold', size: 'lg', align: 'center' },
+        {
+          type: 'box', layout: 'vertical', spacing: 'md', margin: 'lg',
+          contents: [
+            { type: 'button', action: { type: 'datetimepicker', label: '📅 เลือกวันที่', data: 'selectDate', mode: 'date', initial: '2025-09-18', max: '2026-12-31', min: '2025-01-01' }, style: 'primary', color: '#5B86E5' },
+            { type: 'button', action: { type: 'datetimepicker', label: '⏰ เลือกเวลาเริ่ม', data: 'selectStart', mode: 'time', initial: '09:00' }, style: 'secondary' },
+            { type: 'button', action: { type: 'datetimepicker', label: '⏱️ เลือกเวลาสิ้นสุด', data: 'selectEnd', mode: 'time', initial: '10:00' }, style: 'secondary' }
+          ]
+        }
+      ]
+    },
+    styles: { body: { backgroundColor: '#FFFFFF' } }
+  }
+};
+
+async function main() {
+  await liff.init({ liffId });
+  if (!liff.isInClient()) {
+    document.body.innerHTML = '<p>Open this LIFF inside LINE.</p>';
+    return;
+  }
+  try {
+    await liff.sendMessages([flexRoom, flexDateTime]);
+    liff.closeWindow();
+  } catch (e) {
+    console.error(e);
+    document.body.innerHTML = '<p>ส่งข้อความล้มเหลว</p>';
+  }
+}
+
+main();
+</script>
+</body>
+</html>

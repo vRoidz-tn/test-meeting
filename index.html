@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>Booking Flex Debug (fixed)</title>
+  <title>Booking Flex Debug (sequential)</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     body { font-family: sans-serif; background:#f4f4f4; padding:20px; }
@@ -13,7 +13,7 @@
 <h3>LIFF Debug</h3>
 <pre id="log">Loading…</pre>
 <script>
-const liffId = '2007795446-LJyk3OJ3';   // replace with your LIFF ID
+const liffId = '2007795446-LJyk3OJ3';   // put your LIFF ID here
 
 const flexRoom = {
   type: 'flex',
@@ -89,13 +89,20 @@ async function main(){
     const profile = await liff.getProfile();
     log('Profile: ' + JSON.stringify(profile));
 
+    // step 1: simple text
     log('Step 1: send plain text');
     await liff.sendMessages([{ type:'text', text:'Test message from LIFF' }]);
-    log('Text message sent OK');
+    log('Text sent OK');
 
-    log('Step 2: send Flex messages');
-    await liff.sendMessages([flexRoom, flexDateTime]);
-    log('Flex messages sent OK');
+    // step 2: first Flex
+    log('Step 2: send room Flex');
+    await liff.sendMessages([flexRoom]);
+    log('Room Flex sent OK');
+
+    // step 3: second Flex
+    log('Step 3: send datetime Flex');
+    await liff.sendMessages([flexDateTime]);
+    log('DateTime Flex sent OK');
 
     liff.closeWindow();
   }catch(err){
@@ -103,6 +110,7 @@ async function main(){
     document.getElementById('log').textContent += '\nส่งข้อความล้มเหลว\n' + err;
   }
 }
+
 main();
 </script>
 </body>

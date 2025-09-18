@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>Booking Flex Debug</title>
+  <title>Booking Flex Debug (fixed)</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     body { font-family: sans-serif; background:#f4f4f4; padding:20px; }
@@ -13,7 +13,7 @@
 <h3>LIFF Debug</h3>
 <pre id="log">Loading…</pre>
 <script>
-const liffId = '2007795446-LJyk3OJ3';   // <<< put your LIFF ID here
+const liffId = '2007795446-LJyk3OJ3';   // replace with your LIFF ID
 
 const flexRoom = {
   type: 'flex',
@@ -31,9 +31,9 @@ const flexRoom = {
           margin: 'lg',
           spacing: 'sm',
           contents: [
-            { type: 'button', action: { type: 'postback', label: 'Evolve Room – 1st floor', data: 'room=evolve' }, style: 'primary', color: '#5B86E5' },
-            { type: 'button', action: { type: 'postback', label: 'Strategic Thinking Room – 2nd floor', data: 'room=strategic' }, style: 'secondary' },
-            { type: 'button', action: { type: 'postback', label: 'Teamwork Room – 4th floor', data: 'room=teamwork' }, style: 'secondary' }
+            { type: 'button', action: { type: 'message', label: 'Evolve Room – 1st floor', text: 'room=evolve' }, style: 'primary', color: '#5B86E5' },
+            { type: 'button', action: { type: 'message', label: 'Strategic Thinking Room – 2nd floor', text: 'room=strategic' }, style: 'secondary' },
+            { type: 'button', action: { type: 'message', label: 'Teamwork Room – 4th floor', text: 'room=teamwork' }, style: 'secondary' }
           ]
         }
       ]

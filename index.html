@@ -2,10 +2,11 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>Booking Flex Auto</title>
+  <title>Booking Flex Auto (Debug)</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
 <body>
+<pre id="log">Loading…</pre>
 <script>
 const liffId = '2007795446-LJyk3OJ3';
 
@@ -20,7 +21,10 @@ const flexRoom = {
       contents: [
         { type: 'text', text: 'เลือกห้องประชุม', weight: 'bold', size: 'lg', align: 'center' },
         {
-          type: 'box', layout: 'vertical', margin: 'lg', spacing: 'sm',
+          type: 'box',
+          layout: 'vertical',
+          margin: 'lg',
+          spacing: 'sm',
           contents: [
             { type: 'button', action: { type: 'postback', label: 'Evolve Room – 1st floor', data: 'room=evolve' }, style: 'primary', color: '#5B86E5' },
             { type: 'button', action: { type: 'postback', label: 'Strategic Thinking Room – 2nd floor', data: 'room=strategic' }, style: 'secondary' },
@@ -44,7 +48,10 @@ const flexDateTime = {
       contents: [
         { type: 'text', text: 'เลือกวันที่และเวลา', weight: 'bold', size: 'lg', align: 'center' },
         {
-          type: 'box', layout: 'vertical', spacing: 'md', margin: 'lg',
+          type: 'box',
+          layout: 'vertical',
+          spacing: 'md',
+          margin: 'lg',
           contents: [
             { type: 'button', action: { type: 'datetimepicker', label: '📅 เลือกวันที่', data: 'selectDate', mode: 'date', initial: '2025-09-18', max: '2026-12-31', min: '2025-01-01' }, style: 'primary', color: '#5B86E5' },
             { type: 'button', action: { type: 'datetimepicker', label: '⏰ เลือกเวลาเริ่ม', data: 'selectStart', mode: 'time', initial: '09:00' }, style: 'secondary' },
@@ -57,18 +64,34 @@ const flexDateTime = {
   }
 };
 
+function log(msg) {
+  console.log(msg);
+  const el = document.getElementById('log');
+  el.textContent += `\n${msg}`;
+}
+
 async function main() {
-  await liff.init({ liffId });
-  if (!liff.isInClient()) {
-    document.body.innerHTML = '<p>Open this LIFF inside LINE.</p>';
-    return;
-  }
   try {
+    log('Initializing LIFF…');
+    await liff.init({ liffId });
+    log('LIFF init done');
+    log('isInClient: ' + liff.isInClient());
+
+    if (!liff.isInClient()) {
+      document.getElementById('log').textContent = 'กรุณาเปิดหน้านี้ใน LINE';
+      return;
+    }
+
+    const profile = await liff.getProfile();
+    log('Profile: ' + JSON.stringify(profile));
+
+    log('Sending Flex messages…');
     await liff.sendMessages([flexRoom, flexDateTime]);
+    log('Messages sent successfully');
     liff.closeWindow();
   } catch (e) {
-    console.error(e);
-    document.body.innerHTML = '<p>ส่งข้อความล้มเหลว</p>';
+    console.error('Send error', e);
+    document.getElementById('log').textContent = 'ส่งข้อความล้มเหลว\n' + e;
   }
 }
 

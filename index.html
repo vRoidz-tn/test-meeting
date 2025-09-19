@@ -1,79 +1,1293 @@
-<!DOCTYPE html>
+<script>
+    const liffId = '2007795446-LJyk3OJ3'; // Replace with your actual LIFF ID
+    let selectedRoom = null;
+    let selectedEditRoom = null;
+    let userProfile = null;
+    let currentIntent = null;
+
+    function log(msg) {
+      console.log(msg);
+      const logElement = document.getElementById('logContent');
+      const timestamp = new Date().toLocaleTimeString();
+      logElement.innerHTML += `[${timestamp}] ${msg}<br>`;
+      document.getElementById('log').style.display = 'block';
+    }
+
+    function clearErrors() {
+      document.querySelectorAll('.error').forEach(el => el.textContent = '');
+    }
+
+    function showError(fieldId, message) {
+      document.getElementById(fieldId + 'Error').textContent = message;
+    }
+
+    function showScreen(screenId) {
+      // Hide all screens
+      document.getElementById('intentionScreen').style.display = 'none';
+      document.getElementById('bookingForm').style.display = 'none';
+      document.getElementById('checkScreen').style.display = 'none';
+      document.getElementById('cancelScreen').style.display = 'none';
+      document.getElementById('editScreen').style.display = 'none';
+      
+      // Show selected screen
+      document.getElementById(screenId).style.display = 'block';
+    }
+
+    function validateBookingForm() {
+      clearErrors();
+      let isValid = true;
+
+      const title = document.getElementById('title').value.trim();
+      if (!title) {
+        showError('title', 'Please enter a meeting title');
+        isValid = false;
+      }
+
+      if (!selectedRoom) {
+        showError('room', 'Please select a room');
+        isValid = false;
+      }
+
+      const date = document.getElementById('date').value;
+      if (!date) {
+        showError('date', 'Please select a date');
+        isValid = false;
+      } else {
+        const selectedDate = new Date(date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (selectedDate < today) {
+          showError('date', 'Cannot book for past dates');
+          isValid = false;
+        }
+      }
+
+      const startTime = document.getElementById('startTime').value;
+      const endTime = document.getElementById('endTime').value;
+      
+      if (!startTime) {
+        showError('startTime', 'Please select start time');
+        isValid = false;
+      }
+      
+      if (!endTime) {
+        showError('endTime', 'Please select end time');
+        isValid = false;
+      }
+      
+      if (startTime && endTime && startTime >= endTime) {
+        showError('endTime', 'End time must be after start time');
+        isValid = false;
+      }
+
+      return isValid;
+    }
+
+    async function initLIFF() {
+      try {
+        log('Initializing LIFF...');
+        await liff.init({ liffId });
+        log('LIFF initialized successfully');
+
+        if (!liff.isInClient()) {
+          log('Not in LINE client - showing desktop version');
+          return;
+        }
+
+        userProfile = await liff.getProfile();
+        log(`User profile loaded: ${userProfile.displayName}`);
+        
+        // Set default date to today
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('date').value = today;
+        document.getElementById('checkDate').value = today;
+        document.getElementById('editDate').value = today;
+        
+        // Set default times
+        document.getElementById('startTime').value = '09:00';
+        document.getElementById('endTime').value = '10:00';
+        document.getElementById('editStartTime').value = '09:00';
+        document.getElementById('editEndTime').value = '10:00';
+
+      } catch (err) {
+        log(`LIFF initialization failed: ${err.message}`);
+        console.error('LIFF init error:', err);
+      }
+    }
+
+    function setupEventListeners() {
+      // Intention selection
+      document.querySelectorAll('.intention-option').forEach(option => {
+        option.addEventListener('click', () => {
+          document.querySelectorAll('.intention-option').forEach(opt => 
+            opt.classList.remove('selected')
+          );
+          option.classList.add('selected');
+          currentIntent = option.dataset.intent;
+          
+          // Navigate to appropriate screen after a short delay
+          setTimeout(() => {
+            switch(currentIntent) {
+              case 'book':
+                showScreen('bookingForm');
+                break;
+              case 'check':
+                showScreen('checkScreen');
+                break;
+              case 'cancel':
+                showScreen('cancelScreen');
+                break;
+              case 'edit':
+                showScreen('editScreen');
+                break;
+            }
+          }, 300);
+        });
+      });
+
+      // Room selection for booking
+      document.querySelectorAll('#roomGrid .room-option').forEach(option => {
+        option.addEventListener('click', () => {
+          document.querySelectorAll('#roomGrid .room-option').forEach(opt => 
+            opt.classList.remove('selected')
+          );
+          option.classList.add('selected');
+          selectedRoom = option.dataset.room;
+          clearErrors();
+        });
+      });
+
+      // Room selection for editing
+      document.querySelectorAll('#editRoomGrid .room-option').forEach(option => {
+        option.addEventListener('click', () => {
+          document.querySelectorAll('#editRoomGrid .room-option').forEach(opt => 
+            opt.classList.remove('selected')
+          );
+          option.classList.add('selected');
+          selectedEditRoom = option.dataset.room;
+        });
+      });
+
+      // Back buttons
+      document.getElementById('backBtn').addEventListener('click', () => showScreen('intentionScreen'));
+      document.getElementById('backFromCheckBtn').addEventListener('click', () => showScreen('intentionScreen'));
+      document.getElementById('backFromCancelBtn').addEventListener('click', () => showScreen('intentionScreen'));
+      document.getElementById('backFromEditBtn').addEventListener('click', () => showScreen('intentionScreen'));
+
+      // Form submission
+      document.getElementById('bookingForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await handleBookingSubmit();
+      });
+
+      // Check bookings
+      document.getElementById('checkBookingsBtn').addEventListener('click', async () => {
+        await handleCheckBookings();
+      });
+
+      // Cancel booking
+      document.getElementById('cancelBookingBtn').addEventListener('click', async () => {
+        await handleCancelBooking();
+      });
+
+      // Load booking for editing
+      document.getElementById('loadBookingBtn').addEventListener('click', async () => {
+        await handleLoadBooking();
+      });
+
+      // Save edited booking
+      document.getElementById('saveEditBtn').addEventListener('click', async () => {
+        await handleSaveEdit();
+      });
+
+      // Clear errors on input
+      document.getElementById('title').addEventListener('input', clearErrors);
+      document.getElementById('date').addEventListener('change', clearErrors);
+      document.getElementById('startTime').addEventListener('change', clearErrors);
+      document.getElementById('endTime').addEventListener('change', clearErrors);
+    }
+
+    async function handleBookingSubmit() {
+      if (!validateBookingForm()) return;
+
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = '⏳ Booking...';
+
+      try {
+        const bookingData = {
+          intent: 'book_meeting_room',
+          title: document.getElementById('title').value.trim(),
+          room: selectedRoom,
+          date: document.getElementById('date').value,
+          startTime: document.getElementById('startTime').value,
+          endTime: document.getElementById('endTime').value,
+          user: userProfile ? {
+            userId: userProfile.userId,
+            displayName: userProfile.displayName,
+            pictureUrl: userProfile.pictureUrl
+          } : null
+        };
+
+        log('Preparing booking data...');
+        const confirmationMessage = createConfirmationMessage(bookingData);
+        
+        if (liff.isInClient()) {
+          await liff.sendMessages([confirmationMessage]);
+          log('Booking confirmation sent to chat');
+          setTimeout(() => liff.closeWindow(), 1000);
+        } else {
+          log('Booking would be processed (testing mode)');
+          alert('Booking successful! (Testing mode)');
+        }
+
+      } catch (err) {
+        log(`Booking failed: ${err.message}`);
+        alert('Booking failed. Please try again.');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '📝 Book Meeting Room';
+      }
+    }
+
+    async function handleCheckBookings() {
+      const checkDate = document.getElementById('checkDate').value;
+      if (!checkDate) {
+        alert('Please select a date to check');
+        return;
+      }
+
+      const bookingsList = document.getElementById('bookingsList');
+      bookingsList.innerHTML = '<div style="text-align: center; padding: 20px;">🔍 Loading bookings...</div>';
+
+      try {
+        // Simulate API call - replace with actual Google Sheets query
+        const mockBookings = [
+          {
+            bookingId: 'BK123456',
+            title: 'Team Standup',
+            room: 'evolve',
+            roomName: 'Evolve Room (1st Floor)',
+            startTime: '09:00',
+            endTime: '10:00'
+          },
+          {
+            bookingId: 'BK789012',
+            title: 'Project Review',
+            room: 'strategic',
+            roomName: 'Strategic Thinking Room (2nd Floor)',
+            startTime: '14:00',
+            endTime: '15:30'
+          }
+        ];
+
+        displayBookings(mockBookings, bookingsList);
+        
+      } catch (err) {
+        bookingsList.innerHTML = '<div style="color: #e74c3c; text-align: center;">Failed to load bookings</div>';
+      }
+    }
+
+    function displayBookings(bookings, container) {
+      if (bookings.length === 0) {
+        container.innerHTML = '<div style="text-align: center; color: #666;">No bookings found for this date</div>';
+        return;
+      }
+
+      const bookingsHTML = bookings.map(booking => `
+        <div class="booking-item">
+          <div class="booking-header">${booking.title}</div>
+          <div class="booking-details">
+            🏠 ${booking.roomName}<br>
+            <span class="booking-time">⏰ ${booking.startTime} - ${booking.endTime}</span><br>
+            🔖 ID: ${booking.bookingId}
+          </div>
+        </div>
+      `).join('');
+
+      container.innerHTML = bookingsHTML;
+    }
+
+    async function handleCancelBooking() {
+      const bookingId = document.getElementById('cancelBookingId').value.trim();
+      if (!bookingId) {
+        showError('cancel', 'Please enter a booking ID');
+        return;
+      }
+
+      if (!confirm(`Are you sure you want to cancel booking ${bookingId}?`)) {
+        return;
+      }
+
+      try {
+        // Send cancellation message to LINE chat
+        const cancelMessage = {
+          type: 'text',
+          text: `❌ Booking Cancelled: ${bookingId}\n\nYour booking has been cancelled successfully.`
+        };
+
+        if (liff.isInClient()) {
+          await liff.sendMessages([cancelMessage]);
+          setTimeout(() => liff.closeWindow(), 1000);
+        } else {
+          alert('Booking cancelled! (Testing mode)');
+          showScreen('intentionScreen');
+        }
+
+      } catch (err) {
+        showError('cancel', 'Failed to cancel booking. Please try again.');
+      }
+    }
+
+    async function handleLoadBooking() {
+      const bookingId = document.getElementById('editBookingId').value.trim();
+      if (!bookingId) {
+        showError('edit', 'Please enter a booking ID');
+        return;
+      }
+
+      try {
+        // Simulate loading booking - replace with actual Google Sheets query
+        const mockBooking = {
+          bookingId: bookingId,
+          title: 'Team Meeting',
+          room: 'evolve',
+          date: '2025-09-20',
+          startTime: '09:00',
+          endTime: '10:00'
+        };
+
+        // Populate edit form
+        document.getElementById('editTitle').value = mockBooking.title;
+        document.getElementById('editDate').value = mockBooking.date;
+        document.getElementById('editStartTime').value = mockBooking.startTime;
+        document.getElementById('editEndTime').value = mockBooking.endTime;
+
+        // Select room
+        document.querySelectorAll('#editRoomGrid .room-option').forEach(opt => {
+          opt.classList.remove('selected');
+          if (opt.dataset.room === mockBooking.room) {
+            opt.classList.add('selected');
+            selectedEditRoom = mockBooking.room;
+          }
+        });
+
+        // Show edit form
+        document.getElementById('editForm').style.display = 'block';
+
+      } catch (err) {
+        showError('edit', 'Booking not found. Please check the ID.');
+      }
+    }
+
+    async function handleSaveEdit() {
+      const editData = {
+        bookingId: document.getElementById('editBookingId').value.trim(),
+        title: document.getElementById('editTitle').value.trim(),
+        room: selectedEditRoom,
+        date: document.getElementById('editDate').value,
+        startTime: document.getElementById('editStartTime').value,
+        endTime: document.getElementById('editEndTime').value
+      };
+
+      try {
+        const editMessage = {
+          type: 'text',
+          text: `✏️ Booking Updated: ${editData.bookingId}\n\n📋 ${editData.title}\n🏠 Room: ${editData.room}\n📅 Date: ${editData.date}\n⏰ Time: ${editData.startTime} - ${editData.endTime}`
+        };
+
+        if (liff.isInClient()) {
+          await liff.sendMessages([editMessage]);
+          setTimeout(() => liff.closeWindow(), 1000);
+        } else {
+          alert('Booking updated! (Testing mode)');
+          showScreen('intentionScreen');
+        }
+
+      } catch (err) {
+        alert('Failed to update booking. Please try again.');
+      }
+    }
+
+    function createConfirmationMessage(data) {
+      const roomNames = {
+        evolve: 'Evolve Room (1st Floor)',
+        strategic: 'Strategic Thinking Room (2nd Floor)',
+        teamwork: 'Teamwork Room (4th Floor)'
+      };
+
+      return {
+        type: 'flex',
+        altText: `Meeting Room Booking: ${data.title}`,
+        contents: {
+          type: 'bubble',
+          header: {
+            type: 'box',
+            layout: 'vertical',
+            contents: [{
+              type: 'text',
+              text: '✅ Booking Request',
+              weight: 'bold',
+              color: '#ffffff',
+              size: 'lg',
+              align: 'center'
+            }],
+            backgroundColor: '#27ae60',
+            paddingAll: '20px'
+          },
+          body: {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'text',
+                text: data.title,
+                weight: 'bold',
+                size: 'xl',
+                margin: 'none',
+                wrap: true
+              },
+              {
+                type: 'separator',
+                margin: 'lg'
+              },
+              {
+                type: 'box',
+                layout: 'vertical',
+                margin: 'lg',
+                spacing: 'sm',
+                contents: [
+                  {
+                    type: 'text',
+                    text: `🏠 ${roomNames[data.room]}`,
+                    color: '#666666',
+                    size: 'sm'
+                  },
+                  {
+                    type: 'text',
+                    text: `📅 ${data.date}`,
+                    color: '#666666',
+                    size: 'sm'
+                  },
+                  {
+                    type: 'text',
+                    text: `⏰ ${data.startTime} - ${data.endTime}`,
+                    color: '#666666',
+                    size: 'sm'
+                  }
+                ]
+              }
+            ],
+            paddingAll: '20px'
+          },
+          footer: {
+            type: 'box',
+            layout: 'vertical',
+            spacing: 'sm',
+            contents: [{
+              type: 'button',
+              style: 'primary',
+              action: {
+                type: 'postback',
+                label: 'Confirm Booking',
+                data: `action=confirm_booking&data=${encodeURIComponent(JSON.stringify(data))}`
+              },
+              color: '#5B86E5'
+            },
+            {
+              type: 'button',
+              style: 'secondary',
+              action: {
+                type: 'postback',
+                label: 'Cancel',
+                data: 'action=cancel_booking'
+              }
+            }],
+            paddingAll: '20px'
+          }
+        }
+      };
+    }
+
+    // Initialize when DOM is loaded
+    document.addEventListener('DOMContentLoaded', () => {
+      setupEventListeners();
+      initLIFF();
+    });
+  </script>
+            <!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>Simple Flex Test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meeting Room Booking</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
-    body { font-family: sans-serif; background:#f4f4f4; padding:20px; }
-    #log { white-space: pre-wrap; background:#fff; padding:10px; border:1px solid #ccc; }
+    body { 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      margin: 0; 
+      padding: 20px;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 400px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      overflow: hidden;
+    }
+    .header {
+      background: linear-gradient(45deg, #5B86E5, #36D1DC);
+      color: white;
+      padding: 30px 20px;
+      text-align: center;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 600;
+    }
+    .form-container {
+      padding: 30px 20px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #333;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e1e5e9;
+      border-radius: 10px;
+      font-size: 16px;
+      transition: border-color 0.3s ease;
+      box-sizing: border-box;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #5B86E5;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+    .intention-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-top: 10px;
+    }
+    .intention-option {
+      padding: 20px 15px;
+      border: 2px solid #e1e5e9;
+      border-radius: 15px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-align: center;
+      background: #f8f9fa;
+      position: relative;
+      overflow: hidden;
+    }
+    .intention-option:hover {
+      border-color: #5B86E5;
+      background: #f0f4ff;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(91, 134, 229, 0.2);
+    }
+    .intention-option.selected {
+      border-color: #5B86E5;
+      background: linear-gradient(45deg, #5B86E5, #36D1DC);
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(91, 134, 229, 0.3);
+    }
+    .intention-icon {
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+    .intention-name {
+      font-weight: 600;
+      margin-bottom: 4px;
+      font-size: 16px;
+    }
+    .intention-desc {
+      font-size: 12px;
+      opacity: 0.8;
+      line-height: 1.3;
+    }
+    .back-btn {
+      width: 100%;
+      padding: 12px;
+      background: #6c757d;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-top: 10px;
+    }
+    .back-btn:hover {
+      background: #5a6268;
+      transform: translateY(-1px);
+    }
+    .cancel-btn {
+      background: linear-gradient(45deg, #e74c3c, #c0392b) !important;
+    }
+    .cancel-btn:hover {
+      background: linear-gradient(45deg, #c0392b, #a93226) !important;
+    }
+    #bookingsList {
+      margin-top: 20px;
+    }
+    .booking-item {
+      background: #f8f9fa;
+      border: 1px solid #e1e5e9;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 10px;
+    }
+    .booking-header {
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 5px;
+    }
+    .booking-details {
+      color: #666;
+      font-size: 14px;
+    }
+    .booking-time {
+      color: #5B86E5;
+      font-weight: 500;
+    }
+    .room-option {
+      padding: 15px;
+      border: 2px solid #e1e5e9;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-align: center;
+      background: #f8f9fa;
+    }
+    .room-option:hover {
+      border-color: #5B86E5;
+      background: #f0f4ff;
+    }
+    .room-option.selected {
+      border-color: #5B86E5;
+      background: #5B86E5;
+      color: white;
+    }
+    .room-name {
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+    .room-floor {
+      font-size: 14px;
+      opacity: 0.7;
+    }
+    .time-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+    .submit-btn {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(45deg, #5B86E5, #36D1DC);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+      margin-top: 20px;
+    }
+    .submit-btn:hover {
+      transform: translateY(-2px);
+    }
+    .submit-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .error {
+      color: #e74c3c;
+      font-size: 14px;
+      margin-top: 5px;
+    }
+    .success {
+      color: #27ae60;
+      font-size: 14px;
+      margin-top: 5px;
+    }
+    #log {
+      background: #f8f9fa;
+      border: 1px solid #e1e5e9;
+      border-radius: 10px;
+      padding: 15px;
+      margin-top: 20px;
+      font-size: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
   </style>
 </head>
 <body>
-<h3>Simple Flex Debug</h3>
-<pre id="log">Loading…</pre>
-<script>
-const liffId = '2007795446-LJyk3OJ3';   // replace with your real LIFF ID
+  <div class="container">
+    <div class="header">
+      <h1>🏢 Meeting Room Booking</h1>
+    </div>
+    
+    <div class="form-container">
+      <!-- Intention Selection Screen -->
+      <div id="intentionScreen">
+        <div class="form-group">
+          <label>🎯 What would you like to do?</label>
+          <div class="intention-grid" id="intentionGrid">
+            <div class="intention-option" data-intent="book">
+              <div class="intention-icon">📝</div>
+              <div class="intention-name">Book Room</div>
+              <div class="intention-desc">Reserve a meeting room</div>
+            </div>
+            <div class="intention-option" data-intent="check">
+              <div class="intention-icon">🔍</div>
+              <div class="intention-name">Check Booking</div>
+              <div class="intention-desc">View existing bookings</div>
+            </div>
+            <div class="intention-option" data-intent="cancel">
+              <div class="intention-icon">❌</div>
+              <div class="intention-name">Cancel Booking</div>
+              <div class="intention-desc">Cancel existing booking</div>
+            </div>
+            <div class="intention-option" data-intent="edit">
+              <div class="intention-icon">✏️</div>
+              <div class="intention-name">Edit Booking</div>
+              <div class="intention-desc">Modify existing booking</div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-// simplest allowed Flex bubble
-const simpleFlex = {
-  type: 'flex',
-  altText: 'ทดสอบ Flex',
-  contents: {
-    type: 'bubble',
-    body: {
-      type: 'box',
-      layout: 'vertical',
-      contents: [
-        {
-          type: 'text',
-          text: 'Hello Flex',
-          weight: 'bold',
-          size: 'lg',
-          align: 'center'
-        },
-        {
-          type: 'button',
-          action: { type: 'message', label: 'Click me', text: 'clicked' },
-          style: 'primary',
-          color: '#5B86E5'
+      <!-- Booking Form Screen -->
+      <form id="bookingForm" style="display: none;">
+        <div class="form-group">
+          <label for="title">📋 Meeting Title</label>
+          <input type="text" id="title" name="title" placeholder="Enter meeting title" required>
+          <div class="error" id="titleError"></div>
+        </div>
+
+        <div class="form-group">
+          <label>🏠 Select Room</label>
+          <div class="room-grid" id="roomGrid">
+            <div class="room-option" data-room="evolve">
+              <div class="room-name">Evolve Room</div>
+              <div class="room-floor">1st Floor</div>
+            </div>
+            <div class="room-option" data-room="strategic">
+              <div class="room-name">Strategic Thinking Room</div>
+              <div class="room-floor">2nd Floor</div>
+            </div>
+            <div class="room-option" data-room="teamwork">
+              <div class="room-name">Teamwork Room</div>
+              <div class="room-floor">4th Floor</div>
+            </div>
+          </div>
+          <div class="error" id="roomError"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="date">📅 Date</label>
+          <input type="date" id="date" name="date" required>
+          <div class="error" id="dateError"></div>
+        </div>
+
+        <div class="form-group">
+          <label>⏰ Time</label>
+          <div class="time-row">
+            <div>
+              <input type="time" id="startTime" name="startTime" placeholder="Start Time" required>
+              <div class="error" id="startTimeError"></div>
+            </div>
+            <div>
+              <input type="time" id="endTime" name="endTime" placeholder="End Time" required>
+              <div class="error" id="endTimeError"></div>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" class="submit-btn" id="submitBtn">
+          📝 Book Meeting Room
+        </button>
+
+        <button type="button" class="back-btn" id="backBtn">
+          ← Back to Menu
+        </button>
+      </form>
+
+      <!-- Check Bookings Screen -->
+      <div id="checkScreen" style="display: none;">
+        <div class="form-group">
+          <label>📅 Select Date to Check</label>
+          <input type="date" id="checkDate" name="checkDate">
+          <button type="button" class="submit-btn" id="checkBookingsBtn">
+            🔍 Check Bookings
+          </button>
+        </div>
+        <div id="bookingsList"></div>
+        <button type="button" class="back-btn" id="backFromCheckBtn">
+          ← Back to Menu
+        </button>
+      </div>
+
+      <!-- Cancel Booking Screen -->
+      <div id="cancelScreen" style="display: none;">
+        <div class="form-group">
+          <label for="cancelBookingId">🔖 Booking ID</label>
+          <input type="text" id="cancelBookingId" name="cancelBookingId" placeholder="Enter booking ID (e.g., BK123456)" required>
+          <div class="error" id="cancelError"></div>
+        </div>
+        <button type="button" class="submit-btn cancel-btn" id="cancelBookingBtn">
+          ❌ Cancel Booking
+        </button>
+        <button type="button" class="back-btn" id="backFromCancelBtn">
+          ← Back to Menu
+        </button>
+      </div>
+
+      <!-- Edit Booking Screen -->
+      <div id="editScreen" style="display: none;">
+        <div class="form-group">
+          <label for="editBookingId">🔖 Booking ID</label>
+          <input type="text" id="editBookingId" name="editBookingId" placeholder="Enter booking ID to edit" required>
+          <button type="button" class="submit-btn" id="loadBookingBtn">
+            📂 Load Booking
+          </button>
+          <div class="error" id="editError"></div>
+        </div>
+        
+        <!-- Edit Form (shows after loading booking) -->
+        <div id="editForm" style="display: none;">
+          <div class="form-group">
+            <label for="editTitle">📋 Meeting Title</label>
+            <input type="text" id="editTitle" name="editTitle" required>
+          </div>
+
+          <div class="form-group">
+            <label>🏠 Select Room</label>
+            <div class="room-grid" id="editRoomGrid">
+              <div class="room-option" data-room="evolve">
+                <div class="room-name">Evolve Room</div>
+                <div class="room-floor">1st Floor</div>
+              </div>
+              <div class="room-option" data-room="strategic">
+                <div class="room-name">Strategic Thinking Room</div>
+                <div class="room-floor">2nd Floor</div>
+              </div>
+              <div class="room-option" data-room="teamwork">
+                <div class="room-name">Teamwork Room</div>
+                <div class="room-floor">4th Floor</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="editDate">📅 Date</label>
+            <input type="date" id="editDate" name="editDate" required>
+          </div>
+
+          <div class="form-group">
+            <label>⏰ Time</label>
+            <div class="time-row">
+              <div>
+                <input type="time" id="editStartTime" name="editStartTime" required>
+              </div>
+              <div>
+                <input type="time" id="editEndTime" name="editEndTime" required>
+              </div>
+            </div>
+          </div>
+
+          <button type="button" class="submit-btn" id="saveEditBtn">
+            💾 Save Changes
+          </button>
+        </div>
+
+        <button type="button" class="back-btn" id="backFromEditBtn">
+          ← Back to Menu
+        </button>
+      </div>
+      
+      <div id="log" style="display: none;">
+        <strong>Debug Log:</strong><br>
+        <div id="logContent"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const liffId = 'YOUR_LIFF_ID'; // Replace with your actual LIFF ID
+    let selectedRoom = null;
+    let userProfile = null;
+
+    function log(msg) {
+      console.log(msg);
+      const logElement = document.getElementById('logContent');
+      const timestamp = new Date().toLocaleTimeString();
+      logElement.innerHTML += `[${timestamp}] ${msg}<br>`;
+      document.getElementById('log').style.display = 'block';
+    }
+
+    function clearErrors() {
+      document.querySelectorAll('.error').forEach(el => el.textContent = '');
+    }
+
+    function showError(fieldId, message) {
+      document.getElementById(fieldId + 'Error').textContent = message;
+    }
+
+    function validateForm() {
+      clearErrors();
+      let isValid = true;
+
+      const title = document.getElementById('title').value.trim();
+      if (!title) {
+        showError('title', 'Please enter a meeting title');
+        isValid = false;
+      }
+
+      if (!selectedRoom) {
+        showError('room', 'Please select a room');
+        isValid = false;
+      }
+
+      const date = document.getElementById('date').value;
+      if (!date) {
+        showError('date', 'Please select a date');
+        isValid = false;
+      } else {
+        const selectedDate = new Date(date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (selectedDate < today) {
+          showError('date', 'Cannot book for past dates');
+          isValid = false;
         }
-      ]
+      }
+
+      const startTime = document.getElementById('startTime').value;
+      const endTime = document.getElementById('endTime').value;
+      
+      if (!startTime) {
+        showError('startTime', 'Please select start time');
+        isValid = false;
+      }
+      
+      if (!endTime) {
+        showError('endTime', 'Please select end time');
+        isValid = false;
+      }
+      
+      if (startTime && endTime && startTime >= endTime) {
+        showError('endTime', 'End time must be after start time');
+        isValid = false;
+      }
+
+      return isValid;
     }
-  }
-};
 
-function log(msg){
-  console.log(msg);
-  document.getElementById('log').textContent += '\n' + msg;
-}
+    async function initLIFF() {
+      try {
+        log('Initializing LIFF...');
+        await liff.init({ liffId });
+        log('LIFF initialized successfully');
 
-async function main(){
-  try{
-    log('Initializing LIFF…');
-    await liff.init({ liffId });
-    log('LIFF init done');
-    log('isInClient: ' + liff.isInClient());
+        if (!liff.isInClient()) {
+          log('Not in LINE client - showing desktop version');
+          return;
+        }
 
-    if (!liff.isInClient()){
-      document.getElementById('log').textContent = 'กรุณาเปิดหน้านี้ใน LINE';
-      return;
+        userProfile = await liff.getProfile();
+        log(`User profile loaded: ${userProfile.displayName}`);
+        
+        // Set default date to today
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('date').value = today;
+        
+        // Set default times
+        document.getElementById('startTime').value = '09:00';
+        document.getElementById('endTime').value = '10:00';
+
+      } catch (err) {
+        log(`LIFF initialization failed: ${err.message}`);
+        console.error('LIFF init error:', err);
+      }
     }
 
-    const profile = await liff.getProfile();
-    log('Profile: ' + JSON.stringify(profile));
+    function setupEventListeners() {
+      // Room selection
+      document.querySelectorAll('.room-option').forEach(option => {
+        option.addEventListener('click', () => {
+          document.querySelectorAll('.room-option').forEach(opt => 
+            opt.classList.remove('selected')
+          );
+          option.classList.add('selected');
+          selectedRoom = option.dataset.room;
+          clearErrors();
+        });
+      });
 
-    log('Sending simple Flex…');
-    await liff.sendMessages([simpleFlex]);
-    log('Flex sent OK');
+      // Form submission
+      document.getElementById('bookingForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await handleSubmit();
+      });
 
-    liff.closeWindow();
-  }catch(err){
-    console.error('Error', err);
-    document.getElementById('log').textContent += '\nส่งข้อความล้มเหลว\n' + err;
-  }
-}
-main();
-</script>
+      // Real-time validation
+      document.getElementById('title').addEventListener('input', clearErrors);
+      document.getElementById('date').addEventListener('change', clearErrors);
+      document.getElementById('startTime').addEventListener('change', clearErrors);
+      document.getElementById('endTime').addEventListener('change', clearErrors);
+    }
+
+    async function handleSubmit() {
+      if (!validateForm()) {
+        return;
+      }
+
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = '⏳ Booking...';
+
+      try {
+        const bookingData = {
+          intent: 'book_meeting_room',
+          title: document.getElementById('title').value.trim(),
+          room: selectedRoom,
+          date: document.getElementById('date').value,
+          startTime: document.getElementById('startTime').value,
+          endTime: document.getElementById('endTime').value,
+          user: userProfile ? {
+            userId: userProfile.userId,
+            displayName: userProfile.displayName,
+            pictureUrl: userProfile.pictureUrl
+          } : null
+        };
+
+        log('Preparing booking data...');
+        log(`Booking: ${JSON.stringify(bookingData, null, 2)}`);
+
+        if (liff.isInClient()) {
+          // Send booking confirmation to chat
+          const confirmationMessage = createConfirmationMessage(bookingData);
+          await liff.sendMessages([confirmationMessage]);
+          
+          log('Booking confirmation sent to chat');
+          
+          // Close LIFF window after a short delay
+          setTimeout(() => {
+            liff.closeWindow();
+          }, 1000);
+        } else {
+          // For testing outside LINE
+          log('Booking would be processed (testing mode)');
+          alert('Booking successful! (Testing mode)');
+        }
+
+      } catch (err) {
+        log(`Booking failed: ${err.message}`);
+        console.error('Booking error:', err);
+        alert('Booking failed. Please try again.');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '📝 Book Meeting Room';
+      }
+    }
+
+    function createConfirmationMessage(data) {
+      const roomNames = {
+        evolve: 'Evolve Room (1st Floor)',
+        strategic: 'Strategic Thinking Room (2nd Floor)',
+        teamwork: 'Teamwork Room (4th Floor)'
+      };
+
+      const formatDate = (dateStr) => {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('th-TH', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+      };
+
+      const formatTime = (timeStr) => {
+        return timeStr;
+      };
+
+      return {
+        type: 'flex',
+        altText: `Meeting Room Booking: ${data.title}`,
+        contents: {
+          type: 'bubble',
+          header: {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'text',
+                text: '✅ Booking Confirmed',
+                weight: 'bold',
+                color: '#ffffff',
+                size: 'lg',
+                align: 'center'
+              }
+            ],
+            backgroundColor: '#27ae60',
+            paddingAll: '20px'
+          },
+          body: {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'text',
+                text: data.title,
+                weight: 'bold',
+                size: 'xl',
+                margin: 'none',
+                wrap: true
+              },
+              {
+                type: 'separator',
+                margin: 'lg'
+              },
+              {
+                type: 'box',
+                layout: 'vertical',
+                margin: 'lg',
+                spacing: 'sm',
+                contents: [
+                  {
+                    type: 'box',
+                    layout: 'baseline',
+                    spacing: 'sm',
+                    contents: [
+                      {
+                        type: 'text',
+                        text: '🏠',
+                        color: '#666666',
+                        size: 'sm',
+                        flex: 0
+                      },
+                      {
+                        type: 'text',
+                        text: roomNames[data.room],
+                        wrap: true,
+                        color: '#666666',
+                        size: 'sm',
+                        flex: 5
+                      }
+                    ]
+                  },
+                  {
+                    type: 'box',
+                    layout: 'baseline',
+                    spacing: 'sm',
+                    contents: [
+                      {
+                        type: 'text',
+                        text: '📅',
+                        color: '#666666',
+                        size: 'sm',
+                        flex: 0
+                      },
+                      {
+                        type: 'text',
+                        text: formatDate(data.date),
+                        wrap: true,
+                        color: '#666666',
+                        size: 'sm',
+                        flex: 5
+                      }
+                    ]
+                  },
+                  {
+                    type: 'box',
+                    layout: 'baseline',
+                    spacing: 'sm',
+                    contents: [
+                      {
+                        type: 'text',
+                        text: '⏰',
+                        color: '#666666',
+                        size: 'sm',
+                        flex: 0
+                      },
+                      {
+                        type: 'text',
+                        text: `${formatTime(data.startTime)} - ${formatTime(data.endTime)}`,
+                        wrap: true,
+                        color: '#666666',
+                        size: 'sm',
+                        flex: 5
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            spacing: 'sm',
+            paddingAll: '20px'
+          },
+          footer: {
+            type: 'box',
+            layout: 'vertical',
+            spacing: 'sm',
+            contents: [
+              {
+                type: 'button',
+                style: 'primary',
+                height: 'sm',
+                action: {
+                  type: 'postback',
+                  label: 'Confirm Booking',
+                  data: `action=confirm_booking&data=${encodeURIComponent(JSON.stringify(data))}`
+                },
+                color: '#5B86E5'
+              },
+              {
+                type: 'button',
+                style: 'secondary',
+                height: 'sm',
+                action: {
+                  type: 'postback',
+                  label: 'Cancel',
+                  data: 'action=cancel_booking'
+                }
+              }
+            ],
+            flex: 0,
+            paddingAll: '20px'
+          }
+        }
+      };
+    }
+
+    // Initialize when DOM is loaded
+    document.addEventListener('DOMContentLoaded', () => {
+      setupEventListeners();
+      initLIFF();
+    });
+  </script>
 </body>
 </html>

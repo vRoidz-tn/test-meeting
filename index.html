@@ -86,16 +86,42 @@
     async function initLIFF() {
       try {
         log('Initializing LIFF...');
+        
+        // Check if LIFF ID is set
+        if (liffId === 'YOUR_LIFF_ID') {
+          log('⚠️ LIFF ID not configured - using test mode');
+          document.getElementById('log').style.display = 'block';
+          return;
+        }
+        
         await liff.init({ liffId });
-        log('LIFF initialized successfully');
+        log('✅ LIFF initialized successfully');
+
+        // Check LIFF state
+        log(`isInClient: ${liff.isInClient()}`);
+        log(`isLoggedIn: ${liff.isLoggedIn()}`);
+        log(`LIFF OS: ${liff.getOS()}`);
+        log(`LIFF Language: ${liff.getLanguage()}`);
+        log(`LIFF Version: ${liff.getVersion()}`);
 
         if (!liff.isInClient()) {
-          log('Not in LINE client - showing desktop version');
+          log('⚠️ Not in LINE client - showing desktop version');
+          document.getElementById('log').style.display = 'block';
           return;
         }
 
-        userProfile = await liff.getProfile();
-        log(`User profile loaded: ${userProfile.displayName}`);
+        if (!liff.isLoggedIn()) {
+          log('User not logged in, attempting login...');
+          liff.login();
+          return;
+        }
+
+        try {
+          userProfile = await liff.getProfile();
+          log(`✅ User profile loaded: ${userProfile.displayName} (${userProfile.userId})`);
+        } catch (profileErr) {
+          log(`⚠️ Failed to get profile: ${profileErr.message}`);
+        }
         
         // Set default date to today
         const today = new Date().toISOString().split('T')[0];
@@ -109,9 +135,15 @@
         document.getElementById('editStartTime').value = '09:00';
         document.getElementById('editEndTime').value = '10:00';
 
+        log('✅ LIFF initialization complete');
+
       } catch (err) {
-        log(`LIFF initialization failed: ${err.message}`);
+        log(`❌ LIFF initialization failed: ${err.message}`);
+        log(`Error stack: ${err.stack}`);
         console.error('LIFF init error:', err);
+        
+        // Show debug info
+        document.getElementById('log').style.display = 'block';
       }
     }
 
@@ -230,23 +262,124 @@
         };
 
         log('Preparing booking data...');
-        const confirmationMessage = createConfirmationMessage(bookingData);
+        log(`Booking data: ${JSON.stringify(bookingData, null, 2)}`);
         
         if (liff.isInClient()) {
-          await liff.sendMessages([confirmationMessage]);
-          log('Booking confirmation sent to chat');
+          // Try simple text message first
+          const simpleMessage = createConfirmationMessage(bookingData);
+          log('Sending simple text message...');
+          
+          try {
+            await liff.sendMessages([simpleMessage]);
+            log('Simple message sent successfully');
+          } catch (textError) {
+            log(`Text message failed: ${textError.message}`);
+            
+            // Fallback to even simpler message
+            const fallbackMessage = {
+              type: 'text',
+              text: `Booking Request:\n${bookingData.title}\nRoom: ${bookingData.room}\nDate: ${bookingData.date}\nTime: ${bookingData.startTime}-${bookingData.endTime}`
+            };
+            
+            try {
+              await liff.sendMessages([fallbackMessage]);
+              log('Fallback message sent successfully');
+            } catch (fallbackError) {
+              log(`Fallback message also failed: ${fallbackError.message}`);
+              throw fallbackError;
+            }
+          }
+          
           setTimeout(() => liff.closeWindow(), 1000);
         } else {
-          log('Booking would be processed (testing mode)');
+          log('Testing mode - booking would be processed');
           alert('Booking successful! (Testing mode)');
         }
 
       } catch (err) {
         log(`Booking failed: ${err.message}`);
-        alert('Booking failed. Please try again.');
+        log(`Error details: ${JSON.stringify(err, null, 2)}`);
+        console.error('Full error:', err);
+        alert(`Booking failed: ${err.message}\nPlease check the debug log for details.`);
       } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = '📝 Book Meeting Room';
+      }
+    }
+
+    async function handleCancelBooking() {
+      const bookingId = document.getElementById('cancelBookingId').value.trim();
+      if (!bookingId) {
+        showError('cancel', 'Please enter a booking ID');
+        return;
+      }
+
+      if (!confirm(`Are you sure you want to cancel booking ${bookingId}?`)) {
+        return;
+      }
+
+      try {
+        // Use simple text message for cancellation
+        const cancelMessage = {
+          type: 'text',
+          text: `❌ Cancel Booking Request\n\nBooking ID: ${bookingId}\n\nPlease confirm cancellation by replying "CONFIRM CANCEL"`
+        };
+
+        if (liff.isInClient()) {
+          await liff.sendMessages([cancelMessage]);
+          log('Cancellation message sent successfully');
+          setTimeout(() => liff.closeWindow(), 1000);
+        } else {
+          alert('Booking cancellation requested! (Testing mode)');
+          showScreen('intentionScreen');
+        }
+
+      } catch (err) {
+        log(`Cancel booking failed: ${err.message}`);
+        showError('cancel', 'Failed to send cancellation request. Please try again.');
+      }
+    }
+
+    async function handleSaveEdit() {
+      const editData = {
+        bookingId: document.getElementById('editBookingId').value.trim(),
+        title: document.getElementById('editTitle').value.trim(),
+        room: selectedEditRoom,
+        date: document.getElementById('editDate').value,
+        startTime: document.getElementById('editStartTime').value,
+        endTime: document.getElementById('editEndTime').value
+      };
+
+      if (!editData.title || !editData.room || !editData.date || !editData.startTime || !editData.endTime) {
+        alert('Please fill in all fields');
+        return;
+      }
+
+      try {
+        const roomNames = {
+          evolve: 'Evolve Room (1st Floor)',
+          strategic: 'Strategic Thinking Room (2nd Floor)',
+          teamwork: 'Teamwork Room (4th Floor)'
+        };
+
+        // Use simple text message for edit
+        const editMessage = {
+          type: 'text',
+          text: `✏️ Edit Booking Request\n\nBooking ID: ${editData.bookingId}\n\nNew Details:\n📋 ${editData.title}\n🏠 ${roomNames[editData.room]}\n📅 ${editData.date}\n⏰ ${editData.startTime} - ${editData.endTime}\n\nPlease confirm changes by replying "CONFIRM EDIT"`
+        };
+
+        if (liff.isInClient()) {
+          await liff.sendMessages([editMessage]);
+          log('Edit message sent successfully');
+          setTimeout(() => liff.closeWindow(), 1000);
+        } else {
+          alert('Booking edit requested! (Testing mode)');
+          showScreen('intentionScreen');
+        }
+
+      } catch (err) {
+        log(`Edit booking failed: ${err.message}`);
+        alert('Failed to send edit request. Please try again.');
       }
     }
 
@@ -416,40 +549,48 @@
         teamwork: 'Teamwork Room (4th Floor)'
       };
 
+      // Create a simple text message first (safer)
+      return {
+        type: 'text',
+        text: `✅ Booking Request\n\n📋 ${data.title}\n🏠 ${roomNames[data.room]}\n📅 ${data.date}\n⏰ ${data.startTime} - ${data.endTime}\n\nPlease confirm this booking by replying "CONFIRM" or cancel by replying "CANCEL"`
+      };
+    }
+
+    function createFlexConfirmationMessage(data) {
+      const roomNames = {
+        evolve: 'Evolve Room (1st Floor)',
+        strategic: 'Strategic Thinking Room (2nd Floor)',
+        teamwork: 'Teamwork Room (4th Floor)'
+      };
+
       return {
         type: 'flex',
         altText: `Meeting Room Booking: ${data.title}`,
         contents: {
           type: 'bubble',
-          header: {
-            type: 'box',
-            layout: 'vertical',
-            contents: [{
-              type: 'text',
-              text: '✅ Booking Request',
-              weight: 'bold',
-              color: '#ffffff',
-              size: 'lg',
-              align: 'center'
-            }],
-            backgroundColor: '#27ae60',
-            paddingAll: '20px'
-          },
           body: {
             type: 'box',
             layout: 'vertical',
             contents: [
               {
                 type: 'text',
-                text: data.title,
+                text: '✅ Booking Request',
                 weight: 'bold',
-                size: 'xl',
-                margin: 'none',
-                wrap: true
+                size: 'lg',
+                color: '#27ae60',
+                align: 'center'
               },
               {
                 type: 'separator',
-                margin: 'lg'
+                margin: 'md'
+              },
+              {
+                type: 'text',
+                text: data.title,
+                weight: 'bold',
+                size: 'lg',
+                margin: 'md',
+                wrap: true
               },
               {
                 type: 'box',
@@ -458,52 +599,97 @@
                 spacing: 'sm',
                 contents: [
                   {
-                    type: 'text',
-                    text: `🏠 ${roomNames[data.room]}`,
-                    color: '#666666',
-                    size: 'sm'
+                    type: 'box',
+                    layout: 'baseline',
+                    spacing: 'sm',
+                    contents: [
+                      {
+                        type: 'text',
+                        text: '🏠',
+                        size: 'sm',
+                        flex: 1
+                      },
+                      {
+                        type: 'text',
+                        text: roomNames[data.room],
+                        size: 'sm',
+                        color: '#666666',
+                        flex: 4,
+                        wrap: true
+                      }
+                    ]
                   },
                   {
-                    type: 'text',
-                    text: `📅 ${data.date}`,
-                    color: '#666666',
-                    size: 'sm'
+                    type: 'box',
+                    layout: 'baseline',
+                    spacing: 'sm',
+                    contents: [
+                      {
+                        type: 'text',
+                        text: '📅',
+                        size: 'sm',
+                        flex: 1
+                      },
+                      {
+                        type: 'text',
+                        text: data.date,
+                        size: 'sm',
+                        color: '#666666',
+                        flex: 4
+                      }
+                    ]
                   },
                   {
-                    type: 'text',
-                    text: `⏰ ${data.startTime} - ${data.endTime}`,
-                    color: '#666666',
-                    size: 'sm'
+                    type: 'box',
+                    layout: 'baseline',
+                    spacing: 'sm',
+                    contents: [
+                      {
+                        type: 'text',
+                        text: '⏰',
+                        size: 'sm',
+                        flex: 1
+                      },
+                      {
+                        type: 'text',
+                        text: `${data.startTime} - ${data.endTime}`,
+                        size: 'sm',
+                        color: '#666666',
+                        flex: 4
+                      }
+                    ]
                   }
                 ]
               }
-            ],
-            paddingAll: '20px'
+            ]
           },
           footer: {
             type: 'box',
             layout: 'vertical',
             spacing: 'sm',
-            contents: [{
-              type: 'button',
-              style: 'primary',
-              action: {
-                type: 'postback',
-                label: 'Confirm Booking',
-                data: `action=confirm_booking&data=${encodeURIComponent(JSON.stringify(data))}`
+            contents: [
+              {
+                type: 'button',
+                style: 'primary',
+                height: 'sm',
+                action: {
+                  type: 'postback',
+                  label: 'Confirm Booking',
+                  data: `action=confirm_booking&room=${data.room}&title=${encodeURIComponent(data.title)}&date=${data.date}&start=${data.startTime}&end=${data.endTime}`
+                },
+                color: '#5B86E5'
               },
-              color: '#5B86E5'
-            },
-            {
-              type: 'button',
-              style: 'secondary',
-              action: {
-                type: 'postback',
-                label: 'Cancel',
-                data: 'action=cancel_booking'
+              {
+                type: 'button',
+                style: 'secondary',
+                height: 'sm',
+                action: {
+                  type: 'message',
+                  label: 'Cancel',
+                  text: 'Cancel booking'
+                }
               }
-            }],
-            paddingAll: '20px'
+            ]
           }
         }
       };

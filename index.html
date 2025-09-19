@@ -122,9 +122,16 @@ function log(m){
 
 function initLIFF(){
   liff.init({liffId}).then(()=>{
-    if(liff.isInClient()) liff.getProfile().then(p=>{user=p;log('User loaded: '+p.userId);});
+    if(liff.isInClient()){
+      liff.getProfile().then(p=>{
+        user=p;
+        log('User loaded: '+user.userId);
+      });
+    }
     const today=new Date().toISOString().split('T')[0];
-    ['date','newDate'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=today;});
+    ['date','newDate'].forEach(id=>{
+      const el=document.getElementById(id);if(el)el.value=today;
+    });
   }).catch(e=>log('LIFF init error: '+e));
 }
 
@@ -165,9 +172,18 @@ function toggleForms(back){
   if(intent==='check'&&!back) sendCheck();
 }
 
-async function loadEvents(){
+async function loadEvents(retry=0){
+  if(!user){
+    if(retry<5){
+      log('User not loaded, retry '+retry);
+      setTimeout(()=>loadEvents(retry+1),300);
+    }else{
+      log('Give up loading events');
+    }
+    return;
+  }
   try{
-    if(!user){log('User not loaded');return;}
+    log('Fetching events for '+user.userId);
     const res=await fetch(`${appUrl}?userid=${encodeURIComponent(user.userId)}`);
     if(!res.ok) throw new Error('HTTP '+res.status);
     const data=await res.json();

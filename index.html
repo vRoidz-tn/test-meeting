@@ -7,15 +7,15 @@
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     body{font-family:'Segoe UI',Tahoma,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);margin:0;padding:20px;min-height:100vh}
-    .container{max-width:420px;margin:0 auto;background:#fff;border-radius:20px;box-shadow:0 10px 30px rgba(0,0,0,.2);overflow:hidden}
+    .container{max-width:420px;margin:0 auto;background:#fff;border-radius:20px;box-shadow:0 10px 30px rgba(0,0,0,.2)}
     .header{background:linear-gradient(45deg,#5B86E5,#36D1DC);color:#fff;padding:25px;text-align:center}
     .form-container{padding:25px}
     .form-group{margin-bottom:18px}
-    label{display:block;margin-bottom:6px;font-weight:600;color:#333}
+    label{display:block;margin-bottom:6px;font-weight:600}
     input{width:100%;padding:10px;border:2px solid #e1e5e9;border-radius:8px;font-size:15px;box-sizing:border-box}
     input:focus{outline:none;border-color:#5B86E5}
     .intention-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .intention-option{padding:16px;border:2px solid #e1e5e9;border-radius:12px;background:#f8f9fa;cursor:pointer;text-align:center}
+    .intention-option{padding:16px;border:2px solid #e1e5e9;border-radius:12px;background:#f8f9fa;text-align:center;cursor:pointer}
     .intention-option.selected{border-color:#5B86E5;background:#5B86E5;color:#fff}
     .room-grid{display:grid;grid-template-columns:1fr;gap:8px}
     .room-option{padding:12px;border:2px solid #e1e5e9;border-radius:8px;background:#f8f9fa;text-align:center;cursor:pointer}
@@ -23,7 +23,6 @@
     .time-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .submit-btn{width:100%;padding:12px;background:linear-gradient(45deg,#5B86E5,#36D1DC);color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:600;margin-top:12px;cursor:pointer}
     .back-btn{width:100%;padding:10px;background:#6c757d;color:#fff;border:none;border-radius:8px;margin-top:8px;cursor:pointer}
-    .cancel-btn{background:linear-gradient(45deg,#e74c3c,#c0392b)!important}
     .error{color:#e74c3c;font-size:13px;margin-top:4px}
     #log{background:#f8f9fa;border:1px solid #e1e5e9;border-radius:8px;padding:10px;margin-top:15px;font-size:12px;max-height:150px;overflow-y:auto;display:none}
   </style>
@@ -79,24 +78,35 @@
         <label>📋 หัวข้อประชุม</label>
         <input id="editTitle">
       </div>
+
+      <label>🏠 ห้องเดิม</label>
+      <div class="room-grid" id="oldRoomGrid">
+        <div class="room-option" data-room="evolve">Evolve Room – 1F</div>
+        <div class="room-option" data-room="strategic">Strategic Thinking – 2F</div>
+        <div class="room-option" data-room="teamwork">Teamwork – 4F</div>
+      </div>
+
       <label>🔖 เวลาเดิม</label>
       <div class="time-row">
         <input type="date" id="oldDate">
         <input type="time" id="oldStart">
         <input type="time" id="oldEnd">
       </div>
+
       <label>🏠 ห้องใหม่</label>
       <div class="room-grid" id="newRoomGrid">
         <div class="room-option" data-room="evolve">Evolve Room – 1F</div>
         <div class="room-option" data-room="strategic">Strategic Thinking – 2F</div>
         <div class="room-option" data-room="teamwork">Teamwork – 4F</div>
       </div>
+
       <label>📅 เวลาใหม่</label>
       <div class="time-row">
         <input type="date" id="newDate">
         <input type="time" id="newStart">
         <input type="time" id="newEnd">
       </div>
+
       <button type="button" class="submit-btn" id="saveEditBtn">บันทึก</button>
       <button type="button" class="back-btn" id="backFromEdit">← กลับ</button>
     </form>
@@ -107,22 +117,17 @@
 
 <script>
 const liffId='2007795446-LJyk3OJ3';
-let intent=null,room=null,newRoom=null,user=null;
+let intent=null,room=null,oldRoom=null,newRoom=null,user=null;
 const names={evolve:'Evolve Room',strategic:'Strategic Thinking Room',teamwork:'Teamwork Room'};
 
-document.addEventListener('DOMContentLoaded',()=>{
-  initLIFF();
-  bindUI();
-});
+document.addEventListener('DOMContentLoaded',()=>{initLIFF();bindUI();});
 
 function initLIFF(){
   liff.init({liffId}).then(()=>{
     if(liff.isInClient()) liff.getProfile().then(p=>user=p);
     const t=new Date().toISOString().split('T')[0];
-    document.getElementById('date').value=t;
-    document.getElementById('oldDate').value=t;
-    document.getElementById('newDate').value=t;
-  }).catch(e=>console.log(e));
+    ['date','oldDate','newDate'].forEach(id=>document.getElementById(id).value=t);
+  }).catch(console.error);
 }
 
 function bindUI(){
@@ -135,15 +140,23 @@ function bindUI(){
     };
   });
   document.querySelectorAll('#roomGrid .room-option').forEach(o=>{
-    o.onclick=()=>{document.querySelectorAll('#roomGrid .room-option').forEach(i=>i.classList.remove('selected'));o.classList.add('selected');room=o.dataset.room;};
+    o.onclick=()=>{selectRoom(o,'roomGrid');room=o.dataset.room;};
+  });
+  document.querySelectorAll('#oldRoomGrid .room-option').forEach(o=>{
+    o.onclick=()=>{selectRoom(o,'oldRoomGrid');oldRoom=o.dataset.room;};
   });
   document.querySelectorAll('#newRoomGrid .room-option').forEach(o=>{
-    o.onclick=()=>{document.querySelectorAll('#newRoomGrid .room-option').forEach(i=>i.classList.remove('selected'));o.classList.add('selected');newRoom=o.dataset.room;};
+    o.onclick=()=>{selectRoom(o,'newRoomGrid');newRoom=o.dataset.room;};
   });
   document.getElementById('mainForm').onsubmit=e=>{e.preventDefault();sendMain();};
   document.getElementById('saveEditBtn').onclick=sendEdit;
   document.getElementById('backBtn').onclick=()=>toggleForms(true);
   document.getElementById('backFromEdit').onclick=()=>toggleForms(true);
+}
+
+function selectRoom(el,grid){
+  document.querySelectorAll('#'+grid+' .room-option').forEach(i=>i.classList.remove('selected'));
+  el.classList.add('selected');
 }
 
 function toggleForms(back){
@@ -155,12 +168,12 @@ function toggleForms(back){
 
 function sendMain(){
   const title=document.getElementById('title').value.trim();
-  const date=document.getElementById('date').value;
+  const d=document.getElementById('date').value;
   const s=document.getElementById('start').value;
   const e=document.getElementById('end').value;
   let text='';
-  if(intent==='book') text=`Booking Request\nเพื่อ '${title}' ที่ '${names[room]}' '${date}' '${s}'-'${e}'`;
-  if(intent==='cancel') text=`Cancel Request\nเพื่อ '${title}' ที่ '${names[room]}' '${date}' '${s}'-'${e}'`;
+  if(intent==='book') text=`Booking Request\nเพื่อ '${title}' ที่ '${names[room]}' '${d}' '${s}'-'${e}'`;
+  if(intent==='cancel') text=`Cancel Request\nเพื่อ '${title}' ที่ '${names[room]}' '${d}' '${s}'-'${e}'`;
   sendMsg(text);
 }
 
@@ -174,7 +187,7 @@ function sendEdit(){
   const nd=document.getElementById('newDate').value;
   const ns=document.getElementById('newStart').value;
   const ne=document.getElementById('newEnd').value;
-  const text=`Edit Request\nเพื่อ '${t}' ที่ '${names[room]||""}' '${od}' '${os}'-'${oe}' เป็น '${names[newRoom]||""}' '${nd}' '${ns}'-'${ne}'`;
+  const text=`Edit Request\nเพื่อ '${t}' ที่ '${names[oldRoom]}' '${od}' '${os}'-'${oe}' เป็น '${names[newRoom]}' '${nd}' '${ns}'-'${ne}'`;
   sendMsg(text);
 }
 

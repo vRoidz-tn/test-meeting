@@ -6,112 +6,27 @@
   <title>Meeting Room Booking</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
-    body{
-      margin:0;
-      font-family:'Segoe UI',Tahoma,sans-serif;
-      background:radial-gradient(circle at top,#6024b5 0%,#321464 100%);
-      min-height:100vh;
-      padding:20px;
-      color:#eee;
-    }
-    .container{
-      max-width:440px;
-      margin:0 auto;
-      background:rgba(25,20,50,0.85);
-      border-radius:24px;
-      box-shadow:0 0 25px rgba(150,80,255,.6);
-      backdrop-filter:blur(6px);
-    }
-    .header{
-      padding:25px;
-      text-align:center;
-      background:linear-gradient(45deg,#7938ff,#a45bff);
-      border-top-left-radius:24px;
-      border-top-right-radius:24px;
-    }
+    body{margin:0;font-family:'Segoe UI',Tahoma,sans-serif;background:#2a1850;color:#eee;padding:20px}
+    .container{max-width:440px;margin:0 auto;background:#1d1335;border-radius:20px;box-shadow:0 0 20px rgba(180,120,255,.5)}
+    .header{padding:20px;text-align:center;background:linear-gradient(45deg,#7938ff,#a45bff);border-top-left-radius:20px;border-top-right-radius:20px}
     .header h2{margin:0;font-size:22px;color:#fff}
-    .form-container{padding:24px}
-    .form-group{margin-bottom:18px}
+    .form-container{padding:20px}
+    .form-group{margin-bottom:14px}
     label{display:block;margin-bottom:6px;font-weight:600}
-    input{
-      width:100%;
-      padding:10px;
-      border:2px solid #4b2d88;
-      border-radius:10px;
-      background:#1d1335;
-      color:#eee;
-      box-sizing:border-box;
-    }
+    input{width:100%;padding:9px;border:2px solid #4b2d88;border-radius:8px;background:#2b1a4f;color:#eee;box-sizing:border-box}
     input:focus{border-color:#9b6bff;outline:none}
-    .intention-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .intention-option{
-      padding:16px;
-      text-align:center;
-      background:#2c1b50;
-      border:2px solid #4b2d88;
-      border-radius:12px;
-      cursor:pointer;
-      transition:.2s;
-    }
-    .intention-option:hover{background:#3e2670}
-    .intention-option.selected{
-      background:#8e4fff;
-      border-color:#c89fff;
-      color:#fff;
-    }
-    .room-grid{display:grid;grid-template-columns:1fr;gap:10px}
-    .room-option{
-      padding:12px;
-      border:2px solid #4b2d88;
-      border-radius:10px;
-      background:#241447;
-      cursor:pointer;
-      text-align:center;
-      transition:.2s;
-    }
-    .room-option:hover{background:#352060}
-    .room-option.selected{
-      background:#8e4fff;
-      border-color:#c89fff;
-      color:#fff;
-    }
-    .time-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .submit-btn{
-      width:100%;
-      padding:12px;
-      margin-top:14px;
-      font-size:16px;
-      font-weight:600;
-      color:#fff;
-      background:linear-gradient(45deg,#a45bff,#ff8cff);
-      border:none;
-      border-radius:10px;
-      cursor:pointer;
-      box-shadow:0 0 10px rgba(255,140,255,.4);
-    }
-    .back-btn{
-      width:100%;
-      padding:10px;
-      background:#4b2d88;
-      color:#fff;
-      border:none;
-      border-radius:10px;
-      margin-top:8px;
-      cursor:pointer;
-    }
-    #eventList .room-option{margin-bottom:8px}
-    #log{
-      background:#1e1238;
-      border:1px solid #4b2d88;
-      border-radius:8px;
-      padding:10px;
-      margin-top:15px;
-      font-size:12px;
-      max-height:150px;
-      overflow-y:auto;
-      display:none;
-      color:#ccc;
-    }
+    .intention-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .intention-option{padding:14px;text-align:center;background:#3b2670;border:2px solid #4b2d88;border-radius:10px;cursor:pointer}
+    .intention-option.selected{background:#8e4fff;border-color:#c89fff;color:#fff}
+    .room-grid{display:grid;gap:8px}
+    .room-option{padding:10px;border:2px solid #4b2d88;border-radius:8px;background:#29174b;cursor:pointer;text-align:center}
+    .room-option:hover{background:#3d2472}
+    .room-option.selected{background:#8e4fff;border-color:#c89fff;color:#fff}
+    .time-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .submit-btn{width:100%;padding:12px;margin-top:12px;font-size:15px;font-weight:600;color:#fff;background:linear-gradient(45deg,#a45bff,#ff8cff);border:none;border-radius:8px;cursor:pointer}
+    .back-btn{width:100%;padding:9px;background:#4b2d88;color:#fff;border:none;border-radius:8px;margin-top:8px;cursor:pointer}
+    #eventList .room-option{margin-bottom:6px}
+    #log{background:#120a28;border:1px solid #4b2d88;border-radius:6px;padding:8px;margin-top:12px;font-size:12px;max-height:150px;overflow-y:auto;color:#ccc}
   </style>
 </head>
 <body>
@@ -159,8 +74,8 @@
       <button type="button" class="back-btn" id="backBtn">← กลับ</button>
     </form>
 
-    <!-- Event list for cancel/edit -->
-    <div id="eventList" style="display:none;margin-top:16px"></div>
+    <!-- Event list -->
+    <div id="eventList" style="display:none;margin-top:12px"></div>
 
     <!-- Edit -->
     <form id="editForm" style="display:none">
@@ -197,12 +112,20 @@ const names={evolve:'Evolve Room',strategic:'Strategic Thinking Room',teamwork:'
 
 document.addEventListener('DOMContentLoaded',()=>{initLIFF();bindUI();});
 
+function log(m){
+  const box=document.getElementById('log');
+  const body=document.getElementById('logContent');
+  const t=new Date().toLocaleTimeString();
+  body.innerHTML+=`[${t}] ${m}<br>`;
+  box.style.display='block';
+}
+
 function initLIFF(){
   liff.init({liffId}).then(()=>{
-    if(liff.isInClient()) liff.getProfile().then(p=>user=p);
-    const t=new Date().toISOString().split('T')[0];
-    ['date','newDate'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=t;});
-  }).catch(console.error);
+    if(liff.isInClient()) liff.getProfile().then(p=>{user=p;log('User loaded: '+p.userId);});
+    const today=new Date().toISOString().split('T')[0];
+    ['date','newDate'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=today;});
+  }).catch(e=>log('LIFF init error: '+e));
 }
 
 function bindUI(){
@@ -244,24 +167,34 @@ function toggleForms(back){
 
 async function loadEvents(){
   try{
-    const res=await fetch(`${appUrl}?userid=${user.userId}`);
-    const data=await res.json(); // [{id,title,room,date,start,end}]
-    const box=document.getElementById('eventList');
-    box.innerHTML=data.map(ev=>`
-      <div class="room-option" data-id="${ev.id}">
-        <b>${ev.title}</b><br>${ev.room}<br>${ev.date} ${ev.start}-${ev.end}
-      </div>`).join('');
-    box.querySelectorAll('.room-option').forEach(div=>{
-      div.onclick=()=>{selectEvent(div.dataset.id,data);};
-    });
-  }catch(e){alert('โหลดรายการไม่สำเร็จ');}
+    if(!user){log('User not loaded');return;}
+    log('Fetching events for '+user.userId);
+    const res=await fetch(`${appUrl}?userid=${encodeURIComponent(user.userId)}`);
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    log('Events received: '+JSON.stringify(data));
+    renderEvents(data);
+  }catch(e){log('Load events error: '+e);}
+}
+
+function renderEvents(list){
+  const box=document.getElementById('eventList');
+  if(!Array.isArray(list)||list.length===0){box.innerHTML='<div style="padding:6px">ไม่พบการจอง</div>';return;}
+  box.innerHTML=list.map(ev=>`
+    <div class="room-option" data-id="${ev.id}">
+      <b>${ev.title}</b><br>${ev.room}<br>${ev.date} ${ev.start}-${ev.end}
+    </div>`).join('');
+  box.querySelectorAll('.room-option').forEach(div=>{
+    div.onclick=()=>selectEvent(div.dataset.id,list);
+  });
 }
 
 function selectEvent(id,data){
-  selectedEvent=data.find(e=>e.id===id);
+  selectedEvent=data.find(x=>x.id===id);
+  log('Selected: '+JSON.stringify(selectedEvent));
   if(intent==='cancel'){
-    const text=`Cancel Request\nเพื่อ '${selectedEvent.title}' ที่ '${selectedEvent.room}' '${selectedEvent.date}' '${selectedEvent.start}'-'${selectedEvent.end}'`;
-    sendMsg(text);
+    const txt=`Cancel Request\nเพื่อ '${selectedEvent.title}' ที่ '${selectedEvent.room}' '${selectedEvent.date}' '${selectedEvent.start}'-'${selectedEvent.end}'`;
+    sendMsg(txt);
   }
   if(intent==='edit'){
     document.getElementById('editTitle').value=selectedEvent.title;
@@ -283,17 +216,17 @@ function sendEdit(){
   const nd=document.getElementById('newDate').value;
   const ns=document.getElementById('newStart').value;
   const ne=document.getElementById('newEnd').value;
-  const text=`Edit Request\nเพื่อ '${selectedEvent.title}' ที่ '${selectedEvent.room}' '${selectedEvent.date}' '${selectedEvent.start}'-'${selectedEvent.end}' เป็น '${names[newRoom]}' '${nd}' '${ns}'-'${ne}'`;
-  sendMsg(text);
+  const txt=`Edit Request\nเพื่อ '${selectedEvent.title}' ที่ '${selectedEvent.room}' '${selectedEvent.date}' '${selectedEvent.start}'-'${selectedEvent.end}' เป็น '${names[newRoom]}' '${nd}' '${ns}'-'${ne}'`;
+  sendMsg(txt);
 }
 
 function sendCheck(){sendMsg('Check Request');}
 
 function sendMsg(text){
-  if(!liff.isInClient()){alert(text);return;}
+  if(!liff.isInClient()){log('Outside LINE, msg:\n'+text);return;}
   liff.sendMessages([{type:'text',text}])
       .then(()=>liff.closeWindow())
-      .catch(e=>alert(e.message));
+      .catch(e=>log('Send error: '+e.message));
 }
 </script>
 </body>

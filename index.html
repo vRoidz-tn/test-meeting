@@ -6,33 +6,120 @@
   <title>Meeting Room Booking</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
-    body{font-family:'Segoe UI',Tahoma,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);margin:0;padding:20px;min-height:100vh}
-    .container{max-width:420px;margin:0 auto;background:#fff;border-radius:20px;box-shadow:0 10px 30px rgba(0,0,0,.2)}
-    .header{background:linear-gradient(45deg,#5B86E5,#36D1DC);color:#fff;padding:25px;text-align:center}
-    .form-container{padding:25px}
+    body{
+      margin:0;
+      font-family:'Segoe UI',Tahoma,sans-serif;
+      background:radial-gradient(circle at top,#6024b5 0%,#321464 100%);
+      min-height:100vh;
+      padding:20px;
+      color:#eee;
+    }
+    .container{
+      max-width:440px;
+      margin:0 auto;
+      background:rgba(25,20,50,0.85);
+      border-radius:24px;
+      box-shadow:0 0 25px rgba(150,80,255,.6);
+      backdrop-filter:blur(6px);
+    }
+    .header{
+      padding:25px;
+      text-align:center;
+      background:linear-gradient(45deg,#7938ff,#a45bff);
+      border-top-left-radius:24px;
+      border-top-right-radius:24px;
+    }
+    .header h2{margin:0;font-size:22px;color:#fff}
+    .form-container{padding:24px}
     .form-group{margin-bottom:18px}
     label{display:block;margin-bottom:6px;font-weight:600}
-    input{width:100%;padding:10px;border:2px solid #e1e5e9;border-radius:8px;font-size:15px;box-sizing:border-box}
-    input:focus{outline:none;border-color:#5B86E5}
+    input{
+      width:100%;
+      padding:10px;
+      border:2px solid #4b2d88;
+      border-radius:10px;
+      background:#1d1335;
+      color:#eee;
+      box-sizing:border-box;
+    }
+    input:focus{border-color:#9b6bff;outline:none}
     .intention-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .intention-option{padding:16px;border:2px solid #e1e5e9;border-radius:12px;background:#f8f9fa;text-align:center;cursor:pointer}
-    .intention-option.selected{border-color:#5B86E5;background:#5B86E5;color:#fff}
-    .room-grid{display:grid;grid-template-columns:1fr;gap:8px}
-    .room-option{padding:12px;border:2px solid #e1e5e9;border-radius:8px;background:#f8f9fa;text-align:center;cursor:pointer}
-    .room-option.selected{background:#5B86E5;color:#fff;border-color:#5B86E5}
+    .intention-option{
+      padding:16px;
+      text-align:center;
+      background:#2c1b50;
+      border:2px solid #4b2d88;
+      border-radius:12px;
+      cursor:pointer;
+      transition:.2s;
+    }
+    .intention-option:hover{background:#3e2670}
+    .intention-option.selected{
+      background:#8e4fff;
+      border-color:#c89fff;
+      color:#fff;
+    }
+    .room-grid{display:grid;grid-template-columns:1fr;gap:10px}
+    .room-option{
+      padding:12px;
+      border:2px solid #4b2d88;
+      border-radius:10px;
+      background:#241447;
+      cursor:pointer;
+      text-align:center;
+      transition:.2s;
+    }
+    .room-option:hover{background:#352060}
+    .room-option.selected{
+      background:#8e4fff;
+      border-color:#c89fff;
+      color:#fff;
+    }
     .time-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .submit-btn{width:100%;padding:12px;background:linear-gradient(45deg,#5B86E5,#36D1DC);color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:600;margin-top:12px;cursor:pointer}
-    .back-btn{width:100%;padding:10px;background:#6c757d;color:#fff;border:none;border-radius:8px;margin-top:8px;cursor:pointer}
-    .error{color:#e74c3c;font-size:13px;margin-top:4px}
-    #log{background:#f8f9fa;border:1px solid #e1e5e9;border-radius:8px;padding:10px;margin-top:15px;font-size:12px;max-height:150px;overflow-y:auto;display:none}
+    .submit-btn{
+      width:100%;
+      padding:12px;
+      margin-top:14px;
+      font-size:16px;
+      font-weight:600;
+      color:#fff;
+      background:linear-gradient(45deg,#a45bff,#ff8cff);
+      border:none;
+      border-radius:10px;
+      cursor:pointer;
+      box-shadow:0 0 10px rgba(255,140,255,.4);
+    }
+    .back-btn{
+      width:100%;
+      padding:10px;
+      background:#4b2d88;
+      color:#fff;
+      border:none;
+      border-radius:10px;
+      margin-top:8px;
+      cursor:pointer;
+    }
+    #eventList .room-option{margin-bottom:8px}
+    #log{
+      background:#1e1238;
+      border:1px solid #4b2d88;
+      border-radius:8px;
+      padding:10px;
+      margin-top:15px;
+      font-size:12px;
+      max-height:150px;
+      overflow-y:auto;
+      display:none;
+      color:#ccc;
+    }
   </style>
 </head>
 <body>
 <div class="container">
-  <div class="header"><h2>🏢 Meeting Room Booking</h2></div>
+  <div class="header"><h2>💫 Meeting Room Booking</h2></div>
   <div class="form-container">
 
-    <!-- Intent selection -->
+    <!-- Intent -->
     <div id="intentScreen">
       <label>🎯 เลือกการทำงาน</label>
       <div class="intention-grid">
@@ -43,7 +130,7 @@
       </div>
     </div>
 
-    <!-- Booking / Cancel form -->
+    <!-- Book -->
     <form id="mainForm" style="display:none">
       <div class="form-group">
         <label>📋 หัวข้อประชุม</label>
@@ -68,45 +155,31 @@
           <input type="time" id="end">
         </div>
       </div>
-      <button type="submit" class="submit-btn" id="submitBtn">ส่ง</button>
+      <button type="submit" class="submit-btn">ส่ง</button>
       <button type="button" class="back-btn" id="backBtn">← กลับ</button>
     </form>
 
-    <!-- Edit form -->
+    <!-- Event list for cancel/edit -->
+    <div id="eventList" style="display:none;margin-top:16px"></div>
+
+    <!-- Edit -->
     <form id="editForm" style="display:none">
       <div class="form-group">
         <label>📋 หัวข้อประชุม</label>
         <input id="editTitle">
       </div>
-
-      <label>🏠 ห้องเดิม</label>
-      <div class="room-grid" id="oldRoomGrid">
-        <div class="room-option" data-room="evolve">Evolve Room – 1F</div>
-        <div class="room-option" data-room="strategic">Strategic Thinking – 2F</div>
-        <div class="room-option" data-room="teamwork">Teamwork – 4F</div>
-      </div>
-
-      <label>🔖 เวลาเดิม</label>
-      <div class="time-row">
-        <input type="date" id="oldDate">
-        <input type="time" id="oldStart">
-        <input type="time" id="oldEnd">
-      </div>
-
       <label>🏠 ห้องใหม่</label>
       <div class="room-grid" id="newRoomGrid">
         <div class="room-option" data-room="evolve">Evolve Room – 1F</div>
         <div class="room-option" data-room="strategic">Strategic Thinking – 2F</div>
         <div class="room-option" data-room="teamwork">Teamwork – 4F</div>
       </div>
-
       <label>📅 เวลาใหม่</label>
       <div class="time-row">
         <input type="date" id="newDate">
         <input type="time" id="newStart">
         <input type="time" id="newEnd">
       </div>
-
       <button type="button" class="submit-btn" id="saveEditBtn">บันทึก</button>
       <button type="button" class="back-btn" id="backFromEdit">← กลับ</button>
     </form>
@@ -117,7 +190,9 @@
 
 <script>
 const liffId='2007795446-LJyk3OJ3';
-let intent=null,room=null,oldRoom=null,newRoom=null,user=null;
+const appUrl='https://script.google.com/macros/s/AKfycbzOLPgIQN2iJN_BpHvUipOrc6wItS071u4GR5yd1BeQgAYvZ0BISo5I-O_F1ASA4Y7S/exec';
+
+let intent=null,room=null,newRoom=null,user=null,selectedEvent=null;
 const names={evolve:'Evolve Room',strategic:'Strategic Thinking Room',teamwork:'Teamwork Room'};
 
 document.addEventListener('DOMContentLoaded',()=>{initLIFF();bindUI();});
@@ -126,24 +201,16 @@ function initLIFF(){
   liff.init({liffId}).then(()=>{
     if(liff.isInClient()) liff.getProfile().then(p=>user=p);
     const t=new Date().toISOString().split('T')[0];
-    ['date','oldDate','newDate'].forEach(id=>document.getElementById(id).value=t);
+    ['date','newDate'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=t;});
   }).catch(console.error);
 }
 
 function bindUI(){
   document.querySelectorAll('.intention-option').forEach(el=>{
-    el.onclick=()=>{
-      intent=el.dataset.intent;
-      document.querySelectorAll('.intention-option').forEach(i=>i.classList.remove('selected'));
-      el.classList.add('selected');
-      toggleForms();
-    };
+    el.onclick=()=>{intent=el.dataset.intent;selectIntent(el);};
   });
   document.querySelectorAll('#roomGrid .room-option').forEach(o=>{
     o.onclick=()=>{selectRoom(o,'roomGrid');room=o.dataset.room;};
-  });
-  document.querySelectorAll('#oldRoomGrid .room-option').forEach(o=>{
-    o.onclick=()=>{selectRoom(o,'oldRoomGrid');oldRoom=o.dataset.room;};
   });
   document.querySelectorAll('#newRoomGrid .room-option').forEach(o=>{
     o.onclick=()=>{selectRoom(o,'newRoomGrid');newRoom=o.dataset.room;};
@@ -154,6 +221,13 @@ function bindUI(){
   document.getElementById('backFromEdit').onclick=()=>toggleForms(true);
 }
 
+function selectIntent(el){
+  document.querySelectorAll('.intention-option').forEach(i=>i.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedEvent=null;
+  toggleForms();
+}
+
 function selectRoom(el,grid){
   document.querySelectorAll('#'+grid+' .room-option').forEach(i=>i.classList.remove('selected'));
   el.classList.add('selected');
@@ -161,9 +235,39 @@ function selectRoom(el,grid){
 
 function toggleForms(back){
   document.getElementById('intentScreen').style.display=back?'block':'none';
-  document.getElementById('mainForm').style.display=(intent==='book'||intent==='cancel')&&!back?'block':'none';
-  document.getElementById('editForm').style.display=intent==='edit'&&!back?'block':'none';
+  document.getElementById('mainForm').style.display=intent==='book'&&!back?'block':'none';
+  document.getElementById('editForm').style.display=intent==='edit'&&!back&&selectedEvent?'block':'none';
+  document.getElementById('eventList').style.display=(intent==='cancel'||intent==='edit')&&!back&&!selectedEvent?'block':'none';
+  if((intent==='cancel'||intent==='edit')&&!back&&!selectedEvent) loadEvents();
   if(intent==='check'&&!back) sendCheck();
+}
+
+async function loadEvents(){
+  try{
+    const res=await fetch(`${appUrl}?userid=${user.userId}`);
+    const data=await res.json(); // [{id,title,room,date,start,end}]
+    const box=document.getElementById('eventList');
+    box.innerHTML=data.map(ev=>`
+      <div class="room-option" data-id="${ev.id}">
+        <b>${ev.title}</b><br>${ev.room}<br>${ev.date} ${ev.start}-${ev.end}
+      </div>`).join('');
+    box.querySelectorAll('.room-option').forEach(div=>{
+      div.onclick=()=>{selectEvent(div.dataset.id,data);};
+    });
+  }catch(e){alert('โหลดรายการไม่สำเร็จ');}
+}
+
+function selectEvent(id,data){
+  selectedEvent=data.find(e=>e.id===id);
+  if(intent==='cancel'){
+    const text=`Cancel Request\nเพื่อ '${selectedEvent.title}' ที่ '${selectedEvent.room}' '${selectedEvent.date}' '${selectedEvent.start}'-'${selectedEvent.end}'`;
+    sendMsg(text);
+  }
+  if(intent==='edit'){
+    document.getElementById('editTitle').value=selectedEvent.title;
+    document.getElementById('eventList').style.display='none';
+    document.getElementById('editForm').style.display='block';
+  }
 }
 
 function sendMain(){
@@ -171,29 +275,25 @@ function sendMain(){
   const d=document.getElementById('date').value;
   const s=document.getElementById('start').value;
   const e=document.getElementById('end').value;
-  let text='';
-  if(intent==='book') text=`Booking Request\nเพื่อ '${title}' ที่ '${names[room]}' '${d}' '${s}'-'${e}'`;
-  if(intent==='cancel') text=`Cancel Request\nเพื่อ '${title}' ที่ '${names[room]}' '${d}' '${s}'-'${e}'`;
+  const text=`Booking Request\nเพื่อ '${title}' ที่ '${names[room]}' '${d}' '${s}'-'${e}'`;
+  sendMsg(text);
+}
+
+function sendEdit(){
+  const nd=document.getElementById('newDate').value;
+  const ns=document.getElementById('newStart').value;
+  const ne=document.getElementById('newEnd').value;
+  const text=`Edit Request\nเพื่อ '${selectedEvent.title}' ที่ '${selectedEvent.room}' '${selectedEvent.date}' '${selectedEvent.start}'-'${selectedEvent.end}' เป็น '${names[newRoom]}' '${nd}' '${ns}'-'${ne}'`;
   sendMsg(text);
 }
 
 function sendCheck(){sendMsg('Check Request');}
 
-function sendEdit(){
-  const t=document.getElementById('editTitle').value.trim();
-  const od=document.getElementById('oldDate').value;
-  const os=document.getElementById('oldStart').value;
-  const oe=document.getElementById('oldEnd').value;
-  const nd=document.getElementById('newDate').value;
-  const ns=document.getElementById('newStart').value;
-  const ne=document.getElementById('newEnd').value;
-  const text=`Edit Request\nเพื่อ '${t}' ที่ '${names[oldRoom]}' '${od}' '${os}'-'${oe}' เป็น '${names[newRoom]}' '${nd}' '${ns}'-'${ne}'`;
-  sendMsg(text);
-}
-
 function sendMsg(text){
   if(!liff.isInClient()){alert(text);return;}
-  liff.sendMessages([{type:'text',text}]).then(()=>liff.closeWindow()).catch(e=>alert(e.message));
+  liff.sendMessages([{type:'text',text}])
+      .then(()=>liff.closeWindow())
+      .catch(e=>alert(e.message));
 }
 </script>
 </body>

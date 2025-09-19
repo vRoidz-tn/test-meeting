@@ -34,7 +34,6 @@
   <div class="header"><h2>💫 Meeting Room Booking</h2></div>
   <div class="form-container">
 
-    <!-- Intent -->
     <div id="intentScreen">
       <label>🎯 เลือกการทำงาน</label>
       <div class="intention-grid">
@@ -45,7 +44,6 @@
       </div>
     </div>
 
-    <!-- Book -->
     <form id="mainForm" style="display:none">
       <div class="form-group">
         <label>📋 หัวข้อประชุม</label>
@@ -54,9 +52,9 @@
       <div class="form-group">
         <label>🏠 เลือกห้อง</label>
         <div class="room-grid" id="roomGrid">
-          <div class="room-option" data-room="evolve">Evolve Room – 1F</div>
-          <div class="room-option" data-room="strategic">Strategic Thinking – 2F</div>
-          <div class="room-option" data-room="teamwork">Teamwork – 4F</div>
+          <div class="room-option" data-room="evolve">Evolve Room - 1st floor</div>
+          <div class="room-option" data-room="strategic">Strategic Thinking Room - 2nd floor</div>
+          <div class="room-option" data-room="teamwork">Teamwork Room - 4th floor</div>
         </div>
       </div>
       <div class="form-group">
@@ -74,10 +72,8 @@
       <button type="button" class="back-btn" id="backBtn">← กลับ</button>
     </form>
 
-    <!-- Event list -->
     <div id="eventList" style="display:none;margin-top:12px"></div>
 
-    <!-- Edit -->
     <form id="editForm" style="display:none">
       <div class="form-group">
         <label>📋 หัวข้อประชุม</label>
@@ -85,9 +81,9 @@
       </div>
       <label>🏠 ห้องใหม่</label>
       <div class="room-grid" id="newRoomGrid">
-        <div class="room-option" data-room="evolve">Evolve Room – 1F</div>
-        <div class="room-option" data-room="strategic">Strategic Thinking – 2F</div>
-        <div class="room-option" data-room="teamwork">Teamwork – 4F</div>
+        <div class="room-option" data-room="evolve">Evolve Room - 1st floor</div>
+        <div class="room-option" data-room="strategic">Strategic Thinking Room - 2nd floor</div>
+        <div class="room-option" data-room="teamwork">Teamwork Room - 4th floor</div>
       </div>
       <label>📅 เวลาใหม่</label>
       <div class="time-row">
@@ -108,7 +104,11 @@ const liffId='2007795446-LJyk3OJ3';
 const appUrl='https://script.google.com/macros/s/AKfycbx3AdztCYbCAUygSo4669BLcBrnE0Cqii5u1x8o6Aiwn8UUFe6_w4dtqT_PnsmRRsdf/exec';
 
 let intent=null,room=null,newRoom=null,user=null,selectedEvent=null;
-const names={evolve:'Evolve Room',strategic:'Strategic Thinking Room',teamwork:'Teamwork Room'};
+const names={
+  evolve:'Evolve Room - 1st floor',
+  strategic:'Strategic Thinking Room - 2nd floor',
+  teamwork:'Teamwork Room - 4th floor'
+};
 
 document.addEventListener('DOMContentLoaded',()=>{initLIFF();bindUI();});
 
@@ -168,11 +168,9 @@ function toggleForms(back){
 async function loadEvents(){
   try{
     if(!user){log('User not loaded');return;}
-    log('Fetching events for '+user.userId);
     const res=await fetch(`${appUrl}?userid=${encodeURIComponent(user.userId)}`);
     if(!res.ok) throw new Error('HTTP '+res.status);
     const data=await res.json();
-    log('Events received: '+JSON.stringify(data));
     renderEvents(data);
   }catch(e){log('Load events error: '+e);}
 }
@@ -191,10 +189,9 @@ function renderEvents(list){
 
 function selectEvent(id,data){
   selectedEvent=data.find(x=>x.id===id);
-  log('Selected: '+JSON.stringify(selectedEvent));
   if(intent==='cancel'){
-    const txt=`Cancel Request\nเพื่อ '${selectedEvent.title}' ที่ '${selectedEvent.room}' '${selectedEvent.date}' '${selectedEvent.start}'-'${selectedEvent.end}'`;
-    sendMsg(txt);
+    const t=`Cancel Request\nเพื่อ ${selectedEvent.title} ห้อง ${selectedEvent.room} วันที่ ${selectedEvent.date} เวลา ${selectedEvent.start} - ${selectedEvent.end}`;
+    sendMsg(t);
   }
   if(intent==='edit'){
     document.getElementById('editTitle').value=selectedEvent.title;
@@ -208,7 +205,7 @@ function sendMain(){
   const d=document.getElementById('date').value;
   const s=document.getElementById('start').value;
   const e=document.getElementById('end').value;
-  const text=`Booking Request\nเพื่อ '${title}' ที่ '${names[room]}' '${d}' '${s}'-'${e}'`;
+  const text=`Booking Request\nเพื่อ ${title} ห้อง ${names[room]} วันที่ ${d} เวลา ${s} - ${e}`;
   sendMsg(text);
 }
 
@@ -216,7 +213,7 @@ function sendEdit(){
   const nd=document.getElementById('newDate').value;
   const ns=document.getElementById('newStart').value;
   const ne=document.getElementById('newEnd').value;
-  const txt=`Edit Request\nเพื่อ '${selectedEvent.title}' ที่ '${selectedEvent.room}' '${selectedEvent.date}' '${selectedEvent.start}'-'${selectedEvent.end}' เป็น '${names[newRoom]}' '${nd}' '${ns}'-'${ne}'`;
+  const txt=`Edit Request\nเพื่อ ${selectedEvent.title} ห้อง ${selectedEvent.room} วันที่ ${selectedEvent.date} เวลา ${selectedEvent.start} - ${selectedEvent.end} เป็น ${names[newRoom]} วันที่ ${nd} เวลา ${ns} - ${ne}`;
   sendMsg(txt);
 }
 

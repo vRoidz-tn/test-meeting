@@ -15,13 +15,16 @@
     label{display:block;margin-bottom:6px;font-weight:600}
     input{width:100%;padding:9px;border:2px solid #4b2d88;border-radius:8px;background:#2b1a4f;color:#eee;box-sizing:border-box}
     input:focus{border-color:#9b6bff;outline:none}
-    .intention-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .intention-option{padding:14px;text-align:center;background:#3b2670;border:2px solid #4b2d88;border-radius:10px;cursor:pointer}
+
+    .intention-grid{display:flex;gap:10px;margin-bottom:16px}
+    .intention-option{flex:1;padding:14px;text-align:center;background:#3b2670;border:2px solid #4b2d88;border-radius:10px;cursor:pointer}
     .intention-option.selected{background:#8e4fff;border-color:#c89fff;color:#fff}
+
     .room-grid{display:grid;gap:8px}
     .room-option{padding:10px;border:2px solid #4b2d88;border-radius:8px;background:#29174b;cursor:pointer;text-align:center}
     .room-option:hover{background:#3d2472}
     .room-option.selected{background:#8e4fff;border-color:#c89fff;color:#fff}
+
     .time-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .submit-btn{width:100%;padding:12px;margin-top:12px;font-size:15px;font-weight:600;color:#fff;background:linear-gradient(45deg,#a45bff,#ff8cff);border:none;border-radius:8px;cursor:pointer}
     .back-btn{width:100%;padding:9px;background:#4b2d88;color:#fff;border:none;border-radius:8px;margin-top:8px;cursor:pointer}
@@ -38,7 +41,6 @@
       <label>🎯 เลือกการทำงาน</label>
       <div class="intention-grid">
         <div class="intention-option" data-intent="book">📝 จองห้อง</div>
-        <div class="intention-option" data-intent="check">🔍 ตรวจสอบ</div>
         <div class="intention-option" data-intent="cancel">❌ ยกเลิก</div>
         <div class="intention-option" data-intent="edit">✏️ แก้ไข</div>
       </div>
@@ -169,7 +171,6 @@ function toggleForms(back){
   document.getElementById('editForm').style.display=intent==='edit'&&!back&&selectedEvent?'block':'none';
   document.getElementById('eventList').style.display=(intent==='cancel'||intent==='edit')&&!back&&!selectedEvent?'block':'none';
   if((intent==='cancel'||intent==='edit')&&!back&&!selectedEvent) loadEvents();
-  if(intent==='check'&&!back) sendCheck();
 }
 
 async function loadEvents(retry=0){
@@ -232,8 +233,6 @@ function sendEdit(){
   const txt=`Edit Request\nเพื่อ ${selectedEvent.title} ห้อง ${selectedEvent.room} วันที่ ${selectedEvent.date} เวลา ${selectedEvent.start} - ${selectedEvent.end} เป็น ${names[newRoom]} วันที่ ${nd} เวลา ${ns} - ${ne}`;
   sendMsg(txt);
 }
-
-function sendCheck(){sendMsg('Check Request');}
 
 function sendMsg(text){
   if(!liff.isInClient()){log('Outside LINE, msg:\n'+text);return;}
